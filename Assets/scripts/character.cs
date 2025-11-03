@@ -64,7 +64,7 @@ public class character : MonoBehaviour
         jumpRequest = false;
     }
 
-    bool IsGrounded()
+    public bool IsGrounded()
     {
         if (capsule != null)
         {
