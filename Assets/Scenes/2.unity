@@ -6494,7 +6494,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22fd985e4a7685d4cab6703715be1ab2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Footsteps
-  footstepClip: {fileID: 8300000, guid: f897a8f5f2bbd9b4b8f002eda1e97d25, type: 3}
+  footstepClip: {fileID: 8300000, guid: ed7f782480e90834b8917db650052352, type: 3}
   stepDistance: 3
 --- !u!82 &1565038259
 AudioSource:
@@ -6507,9 +6507,9 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: f897a8f5f2bbd9b4b8f002eda1e97d25, type: 3}
+  m_Resource: {fileID: 8300000, guid: ed7f782480e90834b8917db650052352, type: 3}
   m_PlayOnAwake: 0
-  m_Volume: 1
+  m_Volume: 0.318
   m_Pitch: 1
   Loop: 0
   Mute: 0
