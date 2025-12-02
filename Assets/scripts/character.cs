@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody), typeof(CapsuleCollider))]
 public class character : MonoBehaviour
 {
     [Tooltip("Horizontal movement speed (m/s)")]
@@ -11,10 +12,19 @@ public class character : MonoBehaviour
     [Tooltip("Extra distance for the ground check")]
     public float groundCheckExtra = 0.05f;
 
+    [Tooltip("Reference to the camera (used to orient movement)")]
+    public Transform cameraTransform;
+
+    [Tooltip("Degrees per second the player will rotate to face camera yaw")]
+    public float rotationSpeed = 720f;
+
+    [Tooltip("Minimum input magnitude to trigger rotation")]
+    public float rotateThreshold = 0.01f;
+
     Rigidbody rb;
     CapsuleCollider capsule;
 
-    // cache input so we read it in Update and apply in FixedUpdate
+    // cached input
     float inputH;
     float inputV;
     bool jumpRequest;
@@ -24,7 +34,6 @@ public class character : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         capsule = GetComponent<CapsuleCollider>();
 
-        // Use physics for movement; prevent physics from rotating the player
         rb.freezeRotation = true;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
@@ -32,7 +41,7 @@ public class character : MonoBehaviour
 
     void Update()
     {
-        // Read input on main thread
+        // read player input on main thread
         inputH = Input.GetAxis("Horizontal");
         inputV = Input.GetAxis("Vertical");
 
@@ -42,25 +51,37 @@ public class character : MonoBehaviour
 
     void FixedUpdate()
     {
-        // Build movement vector relative to player orientation
-        Vector3 move = (transform.forward * inputV + transform.right * inputH);
+        // compute movement direction relative to camera yaw (keeps movement intuitive)
+        float yaw = (cameraTransform != null) ? cameraTransform.eulerAngles.y : transform.eulerAngles.y;
+        Quaternion yawRot = Quaternion.Euler(0f, yaw, 0f);
+
+        Vector3 rawInput = new Vector3(inputH, 0f, inputV);
+        Vector3 move = yawRot * rawInput;
         if (move.sqrMagnitude > 1f) move.Normalize();
 
-        // Apply horizontal velocity while preserving vertical velocity (gravity/jumps)
         Vector3 desiredVelocity = move * speed;
-        rb.linearVelocity = new Vector3(desiredVelocity.x, rb.linearVelocity.y, desiredVelocity.z);
 
-        // Ground check using capsule bounds
-        bool isGrounded = IsGrounded();
+        // preserve vertical velocity (use project's linearVelocity API)
+        Vector3 v = rb.linearVelocity;
+        rb.linearVelocity = new Vector3(desiredVelocity.x, v.y, desiredVelocity.z);
 
-        // Handle jump
-        if (jumpRequest && isGrounded)
+        // rotate player to face camera yaw when there's input
+        if (rawInput.sqrMagnitude > (rotateThreshold * rotateThreshold))
         {
-            // set vertical velocity directly for a crisp jump
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+            Quaternion current = rb.rotation;
+            Quaternion target = Quaternion.Euler(0f, yaw, 0f);
+            Quaternion next = Quaternion.RotateTowards(current, target, rotationSpeed * Time.fixedDeltaTime);
+            rb.MoveRotation(next);
         }
 
-        // reset jump request; it should only be consumed once
+        // jump
+        bool isGrounded = IsGrounded();
+        if (jumpRequest && isGrounded)
+        {
+            v = rb.linearVelocity;
+            rb.linearVelocity = new Vector3(v.x, jumpForce, v.z);
+        }
+
         jumpRequest = false;
     }
 
@@ -68,14 +89,12 @@ public class character : MonoBehaviour
     {
         if (capsule != null)
         {
-            // bottom of capsule in world space
             Vector3 bottom = transform.position + capsule.center - Vector3.up * (capsule.height * 0.5f - capsule.radius);
             float checkDistance = capsule.radius + groundCheckExtra;
             return Physics.SphereCast(bottom, capsule.radius * 0.95f, Vector3.down, out _, checkDistance);
         }
         else
         {
-            // fallback raycast
             return Physics.Raycast(transform.position, Vector3.down, 1.1f);
         }
     }
