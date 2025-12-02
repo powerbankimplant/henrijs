@@ -722,9 +722,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c72af7bb5890984ea60adb8feb25d32, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  sensitivity: 400
+  sensitivity: 350
   invertY: 0
-  playerBody: {fileID: 0}
+  lockCursor: 1
 --- !u!114 &151844667
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6606,6 +6606,7 @@ MonoBehaviour:
   speed: 5
   jumpForce: 4
   groundCheckExtra: 0.05
+  cameraTransform: {fileID: 0}
 --- !u!114 &1565038258
 MonoBehaviour:
   m_ObjectHideFlags: 0
