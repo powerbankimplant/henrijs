@@ -12,14 +12,8 @@ public class character : MonoBehaviour
     [Tooltip("Extra distance for the ground check")]
     public float groundCheckExtra = 0.05f;
 
-    [Tooltip("Reference to the camera (used to orient movement)")]
+    [Tooltip("Reference to the camera (used to orient movement). If left empty, Camera.main will be used at runtime.")]
     public Transform cameraTransform;
-
-    [Tooltip("Degrees per second the player will rotate to face camera yaw")]
-    public float rotationSpeed = 720f;
-
-    [Tooltip("Minimum input magnitude to trigger rotation")]
-    public float rotateThreshold = 0.01f;
 
     Rigidbody rb;
     CapsuleCollider capsule;
@@ -37,6 +31,10 @@ public class character : MonoBehaviour
         rb.freezeRotation = true;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
+
+        // fallback to Camera.main if cameraTransform wasn't assigned
+        if (cameraTransform == null && Camera.main != null)
+            cameraTransform = Camera.main.transform;
     }
 
     void Update()
@@ -51,12 +49,17 @@ public class character : MonoBehaviour
 
     void FixedUpdate()
     {
-        // compute movement direction relative to camera yaw (keeps movement intuitive)
-        float yaw = (cameraTransform != null) ? cameraTransform.eulerAngles.y : transform.eulerAngles.y;
-        Quaternion yawRot = Quaternion.Euler(0f, yaw, 0f);
+        // ensure we have a camera reference
+        if (cameraTransform == null && Camera.main != null)
+            cameraTransform = Camera.main.transform;
+
+        // Build camera-relative movement (flatten camera forward on Y axis)
+        Vector3 camForward = (cameraTransform != null) ? cameraTransform.forward : transform.forward;
+        Vector3 forward = Vector3.ProjectOnPlane(camForward, Vector3.up).normalized;
+        Vector3 right = Vector3.Cross(Vector3.up, forward);
 
         Vector3 rawInput = new Vector3(inputH, 0f, inputV);
-        Vector3 move = yawRot * rawInput;
+        Vector3 move = forward * inputV + right * inputH;
         if (move.sqrMagnitude > 1f) move.Normalize();
 
         Vector3 desiredVelocity = move * speed;
@@ -64,15 +67,6 @@ public class character : MonoBehaviour
         // preserve vertical velocity (use project's linearVelocity API)
         Vector3 v = rb.linearVelocity;
         rb.linearVelocity = new Vector3(desiredVelocity.x, v.y, desiredVelocity.z);
-
-        // rotate player to face camera yaw when there's input
-        if (rawInput.sqrMagnitude > (rotateThreshold * rotateThreshold))
-        {
-            Quaternion current = rb.rotation;
-            Quaternion target = Quaternion.Euler(0f, yaw, 0f);
-            Quaternion next = Quaternion.RotateTowards(current, target, rotationSpeed * Time.fixedDeltaTime);
-            rb.MoveRotation(next);
-        }
 
         // jump
         bool isGrounded = IsGrounded();
